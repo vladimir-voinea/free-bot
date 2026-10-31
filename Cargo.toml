@@ -1,0 +1,37 @@
+[package]
+name = "free-bot"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+description = "Free Bot: a fast native AI chat desktop app that works with any OpenAI-compatible provider"
+license = "MIT"
+repository = "https://github.com/vladimir-voinea/free-bot"
+default-run = "free-bot"
+
+[dependencies]
+eframe = "0.37"
+egui = "0.37"
+egui_commonmark = { version = "0.26", features = ["better_syntax_highlighting"] }
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+directories = "6"
+rfd = "0.17"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
+base64 = "0.22"
+tungstenite = { version = "0.27", default-features = false, features = ["handshake"] }
+tiny_http = "0.12"
+notify-rust = "4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
+
+[profile.dev.package."*"]
+opt-level = 2

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Free Bot mark: a friendly chat bubble with two eyes. Original artwork, MIT licensed with this project. -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="#111214"/>
+  <path d="M256 104c-92.8 0-168 63.6-168 142 0 44.7 24.5 84.6 62.7 110.6L136 416l72.4-34.3c15.2 3.8 31.2 5.8 47.6 5.8 92.8 0 168-63.6 168-142S348.8 104 256 104z" fill="#F4F4F5"/>
+  <rect x="190" y="200" width="36" height="80" rx="18" fill="#111214"/>
+  <rect x="286" y="200" width="36" height="80" rx="18" fill="#111214"/>
+</svg>
