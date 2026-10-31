@@ -406,7 +406,7 @@ impl Store {
     }
 }
 
-fn write_atomic(path: &Path, bytes: &[u8], private: bool) -> std::io::Result<()> {
+pub fn write_atomic(path: &Path, bytes: &[u8], private: bool) -> std::io::Result<()> {
     let tmp = path.with_extension("json.tmp");
     {
         let mut opts = fs::OpenOptions::new();

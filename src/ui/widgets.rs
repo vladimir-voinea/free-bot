@@ -5,6 +5,12 @@ use egui::{Align2, Color32, CornerRadius, Response, Sense, Stroke, Ui, Vec2, vec
 use super::icons::{self, Icon};
 use super::theme::{self, Palette};
 
+/// Paint a non-interactive icon of `size`.
+pub fn icon(ui: &mut Ui, icon: Icon, size: f32, color: Color32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), Sense::hover());
+    icons::paint(ui.painter(), rect, icon, color);
+}
+
 /// A square, borderless icon button with a hover background.
 pub fn icon_button(ui: &mut Ui, icon: Icon, tooltip: &str) -> Response {
     icon_button_sized(ui, icon, tooltip, 32.0, None)

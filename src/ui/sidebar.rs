@@ -52,6 +52,20 @@ impl FreeBotApp {
                 self.new_chat();
             }
             ui.add_space(4.0);
+            let pending = self.fleet.lock().pending_approvals();
+            let r = widgets::icon_button_sized(ui, Icon::Pulse, "Activity", 36.0, Some(p.text));
+            if pending > 0 {
+                ui.painter().circle_filled(r.rect.right_top() + vec2(-6.0, 6.0), 5.0, p.danger);
+            }
+            if r.clicked() {
+                self.open_page(super::agents::Page::Activity);
+            }
+            ui.add_space(4.0);
+            if widgets::icon_button_sized(ui, Icon::Bot, "Bots", 36.0, Some(p.text)).clicked() {
+                self.settings.sidebar_open = true;
+                self.mark_settings_dirty();
+            }
+            ui.add_space(4.0);
             if widgets::icon_button_sized(ui, Icon::Chat, "History", 36.0, Some(p.text)).clicked() {
                 self.settings.sidebar_open = true;
                 self.mark_settings_dirty();
@@ -107,6 +121,19 @@ impl FreeBotApp {
         if widgets::nav_row(ui, Icon::Compose, "New chat", &shortcut_text(ui.ctx(), &SC_NEW_CHAT)).clicked() {
             self.new_chat();
         }
+        let pending = self.fleet.lock().pending_approvals();
+        let active = |page: &super::agents::Page| self.page.as_ref() == Some(page);
+        let (act, rout, know) =
+            (active(&super::agents::Page::Activity), active(&super::agents::Page::Routines), active(&super::agents::Page::Knowledge));
+        if nav_row_badge(ui, Icon::Pulse, "Activity", pending, act).clicked() {
+            self.open_page(super::agents::Page::Activity);
+        }
+        if nav_row_badge(ui, Icon::Clock, "Routines", 0, rout).clicked() {
+            self.open_page(super::agents::Page::Routines);
+        }
+        if nav_row_badge(ui, Icon::Book, "Knowledge", 0, know).clicked() {
+            self.open_page(super::agents::Page::Knowledge);
+        }
         ui.add_space(10.0);
 
         // Profile row pinned to the bottom; history fills the space between.
@@ -114,6 +141,12 @@ impl FreeBotApp {
         let avail = ui.available_height() - bottom_h;
         ui.allocate_ui(vec2(ui.available_width(), avail.max(0.0)), |ui| {
             egui::ScrollArea::vertical().id_salt("history").auto_shrink([false, false]).show(ui, |ui| {
+                self.agents_sidebar(ui);
+                ui.horizontal(|ui| {
+                    ui.set_height(26.0);
+                    ui.add_space(10.0);
+                    ui.label(egui::RichText::new("Chats").font(theme::font(12.5)).color(p.faint));
+                });
                 self.history_list(ui);
             });
         });
@@ -273,6 +306,25 @@ impl FreeBotApp {
             });
         }
     }
+}
+
+/// A sidebar navigation row with an optional count badge.
+fn nav_row_badge(ui: &mut egui::Ui, icon: Icon, label: &str, count: usize, selected: bool) -> egui::Response {
+    let p = Palette::of(ui);
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
+    if selected {
+        ui.painter().rect_filled(rect, CornerRadius::same(10), p.selected);
+    } else if resp.hovered() {
+        ui.painter().rect_filled(rect, CornerRadius::same(10), p.hover);
+    }
+    icons::paint(ui.painter(), egui::Rect::from_center_size(pos2(rect.left() + 20.0, rect.center().y), Vec2::splat(20.0)), icon, p.text);
+    ui.painter().text(pos2(rect.left() + 40.0, rect.center().y), Align2::LEFT_CENTER, label, theme::font(14.5), p.text);
+    if count > 0 {
+        let c = pos2(rect.right() - 16.0, rect.center().y);
+        ui.painter().circle_filled(c, 9.0, p.danger);
+        ui.painter().text(c, Align2::CENTER_CENTER, count.to_string(), theme::font_bold(11.0), egui::Color32::WHITE);
+    }
+    resp
 }
 
 /// A row inside a dropdown menu.

@@ -21,6 +21,9 @@ directories = "6"
 rfd = "0.17"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 base64 = "0.22"
+tungstenite = { version = "0.27", default-features = false, features = ["handshake"] }
+tiny_http = "0.12"
+notify-rust = "4"
 
 [dev-dependencies]
 tempfile = "3"

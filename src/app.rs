@@ -10,8 +10,10 @@ use base64::Engine;
 use chrono::Utc;
 use egui_commonmark::CommonMarkCache;
 
+use crate::agents::engine::Fleet;
 use crate::api::{self, StreamEvent, StreamHandle, Waker};
 use crate::store::{self, Attachment, AttachmentData, Conversation, Message, ModelRef, Role, Settings, Store, ThemePref, Variant};
+use crate::ui::agents::{AgentUi, Page};
 use crate::ui::theme;
 
 pub struct ActiveStream {
@@ -35,6 +37,8 @@ pub enum SettingsTab {
     General,
     Providers,
     Personalize,
+    Bots,
+    Connectors,
     Data,
     About,
 }
@@ -118,6 +122,11 @@ pub struct FreeBotApp {
     applied_scale: f32,
     settings_dirty: Option<Instant>,
     pub screenshot: Option<crate::ScreenshotPlan>,
+    /// The agent layer: bots, threads, routines, connectors.
+    pub fleet: Fleet,
+    pub agent_ui: AgentUi,
+    /// A bot thread or page shown instead of the chat area.
+    pub page: Option<Page>,
 }
 
 impl FreeBotApp {
@@ -128,6 +137,10 @@ impl FreeBotApp {
         let settings = store.load_settings();
         let convs = store.load_conversations();
         let (title_tx, title_rx) = mpsc::channel();
+        let waker: Arc<dyn Waker> = Arc::new(cc.egui_ctx.clone());
+        let fleet = Fleet::open(store.root(), settings.clone(), waker.clone());
+        let browser_path = fleet.lock().config.browser_path.clone();
+        fleet.browser().set_path(&browser_path);
         let mut app = Self {
             store,
             settings,
@@ -153,12 +166,18 @@ impl FreeBotApp {
             titling: HashSet::new(),
             title_tx,
             title_rx,
-            waker: Arc::new(cc.egui_ctx.clone()),
+            waker,
             applied_theme: None,
             applied_scale: 0.0,
             settings_dirty: None,
             screenshot,
+            fleet,
+            agent_ui: AgentUi::default(),
+            page: None,
         };
+        if let Some(view) = app.screenshot.as_ref().map(|p| p.view.clone()) {
+            app.apply_agent_screenshot_view(&view);
+        }
         if let Some(plan) = &app.screenshot {
             if plan.view.starts_with("chat") {
                 app.current = app.convs.first().map(|c| c.id.clone());
@@ -174,6 +193,66 @@ impl FreeBotApp {
             }
         }
         app
+    }
+
+    /// Screenshot views for the agent layer: `agent:<name>[:profile|computer|memory]`,
+    /// `channel:<name>`, `between`, `activity`, `routines`, `knowledge`, `new-agent`,
+    /// `settings-bots`, `settings-connectors`.
+    fn apply_agent_screenshot_view(&mut self, view: &str) {
+        use crate::ui::agents::PanelTab;
+        let mut parts = view.split(':');
+        let kind = parts.next().unwrap_or("");
+        let arg = parts.next().unwrap_or("").to_lowercase();
+        let extra = parts.next().unwrap_or("");
+        match kind {
+            "agent" => {
+                let id = self.fleet.lock().agents.iter().find(|a| a.name.to_lowercase() == arg).map(|a| a.id.clone());
+                if let Some(id) = id {
+                    let dm = self.fleet.lock().dm_thread(&id);
+                    self.open_thread(&dm);
+                    self.agent_ui.panel = match extra {
+                        "profile" => Some(PanelTab::Profile),
+                        "computer" => Some(PanelTab::Computer),
+                        "files" => {
+                            self.agent_ui.computer_tab = Some(crate::ui::agents::ComputerTab::Files);
+                            Some(PanelTab::Computer)
+                        }
+                        "terminal" => {
+                            self.agent_ui.computer_tab = Some(crate::ui::agents::ComputerTab::Terminal);
+                            Some(PanelTab::Computer)
+                        }
+                        "memory" => Some(PanelTab::Memory),
+                        _ => None,
+                    };
+                }
+            }
+            "channel" => {
+                let id = self.fleet.lock().find_channel(&arg).map(|t| t.id.clone());
+                if let Some(id) = id {
+                    self.open_thread(&id);
+                }
+            }
+            "between" => {
+                let id = self
+                    .fleet
+                    .lock()
+                    .threads
+                    .iter()
+                    .find(|t| matches!(t.kind, crate::agents::model::ThreadKind::AgentDm { .. }))
+                    .map(|t| t.id.clone());
+                if let Some(id) = id {
+                    self.agent_ui.between_open = true;
+                    self.open_thread(&id);
+                }
+            }
+            "activity" => self.open_page(Page::Activity),
+            "routines" => self.open_page(Page::Routines),
+            "knowledge" => self.open_page(Page::Knowledge),
+            "new-agent" => self.new_agent_editor(),
+            "settings-bots" => self.settings_ui = Some(SettingsState::new(SettingsTab::Bots)),
+            "settings-connectors" => self.settings_ui = Some(SettingsState::new(SettingsTab::Connectors)),
+            _ => {}
+        }
     }
 
     // ---- lookup -----------------------------------------------------------
@@ -230,13 +309,21 @@ impl FreeBotApp {
     // ---- navigation -------------------------------------------------------
 
     pub fn new_chat(&mut self) {
+        self.leave_agent_page();
         self.leave_private_chat();
         self.current = None;
         self.editing = None;
         self.composer.request_focus = true;
     }
 
+    pub fn leave_agent_page(&mut self) {
+        if self.page.take().is_some() {
+            self.fleet.lock().viewing = None;
+        }
+    }
+
     pub fn open_conv(&mut self, id: String) {
+        self.leave_agent_page();
         if self.current.as_deref() != Some(id.as_str()) {
             self.leave_private_chat();
             self.current = Some(id);

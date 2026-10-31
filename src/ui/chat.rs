@@ -36,6 +36,13 @@ pub fn centered_column<R>(ui: &mut egui::Ui, max_width: f32, add: impl FnOnce(&m
 
 impl FreeBotApp {
     pub fn main_ui(&mut self, ui: &mut egui::Ui) {
+        if let Some(page) = self.page.clone() {
+            match page {
+                super::agents::Page::Thread(id) => self.thread_ui(ui, &id),
+                other => self.agent_page_ui(ui, &other),
+            }
+            return;
+        }
         self.top_bar(ui);
         match self.current.clone().filter(|id| self.conv(id).is_some()) {
             None => self.home_ui(ui),
@@ -132,6 +139,9 @@ impl FreeBotApp {
                 ui.add_space(16.0);
             }
 
+            if configured && !self.private_mode {
+                self.bots_home_card(ui);
+            }
             self.composer_ui(ui, "What do you want to know?");
             ui.add_space(14.0);
 

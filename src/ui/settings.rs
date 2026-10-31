@@ -15,6 +15,8 @@ const TABS: &[(SettingsTab, Icon, &str)] = &[
     (SettingsTab::General, Icon::Gear, "General"),
     (SettingsTab::Providers, Icon::Key, "Providers & models"),
     (SettingsTab::Personalize, Icon::Pencil, "Personalize"),
+    (SettingsTab::Bots, Icon::Bot, "Bots"),
+    (SettingsTab::Connectors, Icon::Plug, "Connectors"),
     (SettingsTab::Data, Icon::Download, "Data controls"),
     (SettingsTab::About, Icon::Chat, "About"),
 ];
@@ -95,6 +97,8 @@ impl FreeBotApp {
                                 SettingsTab::General => self.general_tab(ui),
                                 SettingsTab::Providers => self.providers_tab(ui),
                                 SettingsTab::Personalize => self.personalize_tab(ui),
+                                SettingsTab::Bots => self.bots_settings_tab(ui),
+                                SettingsTab::Connectors => self.connectors_settings_tab(ui),
                                 SettingsTab::Data => self.data_tab(ui),
                                 SettingsTab::About => about_tab(ui),
                             }

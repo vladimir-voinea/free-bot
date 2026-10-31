@@ -58,7 +58,7 @@ pub fn endpoint(base_url: &str, path: &str) -> String {
     format!("{}/{}", base_url.trim().trim_end_matches('/'), path.trim_start_matches('/'))
 }
 
-fn client(timeout: Option<Duration>) -> reqwest::blocking::Client {
+pub fn client(timeout: Option<Duration>) -> reqwest::blocking::Client {
     reqwest::blocking::Client::builder()
         .connect_timeout(Duration::from_secs(20))
         .timeout(timeout)
@@ -67,7 +67,7 @@ fn client(timeout: Option<Duration>) -> reqwest::blocking::Client {
         .expect("failed to build HTTP client")
 }
 
-fn authed(rb: reqwest::blocking::RequestBuilder, api_key: &str) -> reqwest::blocking::RequestBuilder {
+pub fn authed(rb: reqwest::blocking::RequestBuilder, api_key: &str) -> reqwest::blocking::RequestBuilder {
     if api_key.trim().is_empty() { rb } else { rb.bearer_auth(api_key.trim()) }
 }
 
@@ -330,7 +330,7 @@ fn run_stream(
     Ok(())
 }
 
-fn root_cause(e: &dyn std::error::Error) -> String {
+pub fn root_cause(e: &dyn std::error::Error) -> String {
     let mut msg = e.to_string();
     let mut src = e.source();
     while let Some(s) = src {

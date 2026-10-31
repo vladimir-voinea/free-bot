@@ -1,6 +1,7 @@
 //! Everything that draws. The window is a sidebar on the left and the main
 //! area on the right (home screen or an open chat), with modals on top.
 
+pub mod agents;
 pub mod chat;
 pub mod composer;
 pub mod icons;
@@ -33,6 +34,7 @@ impl eframe::App for FreeBotApp {
         let ctx = ui.ctx().clone();
         self.sync_settings(&ctx);
         self.pump();
+        self.pump_fleet(&ctx);
         self.handle_shortcuts(&ctx);
         self.handle_dropped_files(&ctx);
         self.hovered_msg = self.hovered_msg_next.take();
@@ -49,21 +51,49 @@ impl eframe::App for FreeBotApp {
         egui::CentralPanel::default().frame(Frame::new().fill(p.bg)).show(ui, |ui| self.main_ui(ui));
 
         self.modals_ui(&ctx);
+        self.agent_modals(&ctx);
         self.toasts_ui(&ctx);
         self.drop_overlay(&ctx);
 
-        if !self.streams.is_empty() {
+        if !self.streams.is_empty() || !self.fleet.lock().runs.is_empty() {
             ctx.request_repaint_after(Duration::from_millis(80));
         }
+        // Routines and follow-ups are checked about once a second.
+        ctx.request_repaint_after(Duration::from_millis(1000));
         self.screenshot_step(&ctx);
     }
 
     fn on_exit(&mut self) {
         self.save_settings();
+        self.fleet.stop_all();
+        self.fleet.flush();
     }
 }
 
 impl FreeBotApp {
+    /// Keep the engine in step with settings, run due routines, and show notices.
+    fn pump_fleet(&mut self, ctx: &egui::Context) {
+        self.fleet.set_settings(&self.settings);
+        self.fleet.tick();
+        self.agent_ui.window_focused = ctx.input(|i| i.focused);
+        let (notices, notify) = {
+            let mut st = self.fleet.lock();
+            (std::mem::take(&mut st.notices), st.config.notifications)
+        };
+        for n in notices {
+            let viewing = matches!(&self.page, Some(agents::Page::Thread(t)) if Some(t) == n.thread.as_ref());
+            if self.agent_ui.window_focused {
+                if !viewing {
+                    self.toast(format!("{}: {}", n.title, n.body));
+                }
+            } else if notify {
+                std::thread::spawn(move || {
+                    let _ = notify_rust::Notification::new().summary(&n.title).body(&n.body).appname("Free Bot").show();
+                });
+            }
+        }
+    }
+
     fn handle_shortcuts(&mut self, ctx: &egui::Context) {
         let (new_chat, search, sidebar, settings, private, esc) = ctx.input_mut(|i| {
             (
@@ -181,9 +211,13 @@ impl FreeBotApp {
         if plan.frames == 3
             && let Some(prompt) = plan.autosend.take()
         {
-            self.composer.text = prompt;
-            self.composer.think = self.screenshot.as_ref().is_some_and(|p| p.view.contains("think"));
-            self.send_composer();
+            if let Some(agents::Page::Thread(t)) = self.page.clone() {
+                self.fleet.user_post(&t, &prompt);
+            } else {
+                self.composer.text = prompt;
+                self.composer.think = self.screenshot.as_ref().is_some_and(|p| p.view.contains("think"));
+                self.send_composer();
+            }
             if let Some(plan) = &mut self.screenshot {
                 plan.started = std::time::Instant::now();
             }
