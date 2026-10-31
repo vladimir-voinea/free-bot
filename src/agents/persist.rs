@@ -25,11 +25,6 @@ impl FleetStore {
         &self.root
     }
 
-    /// The default working folder of an agent.
-    pub fn agent_dir(&self, agent_id: &str) -> PathBuf {
-        self.root.join("agents").join(safe(agent_id)).join("workspace")
-    }
-
     pub fn browser_profile_dir(&self) -> PathBuf {
         self.root.join("browser-profile")
     }

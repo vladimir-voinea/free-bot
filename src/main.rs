@@ -3,6 +3,7 @@
 mod agents;
 mod api;
 mod app;
+mod background;
 mod store;
 mod ui;
 
@@ -27,7 +28,39 @@ fn load_icon() -> Option<egui::IconData> {
     Some(egui::IconData { rgba: img.into_raw(), width, height })
 }
 
+const HELP: &str = "Free Bot: a desktop team of AI bots on any OpenAI-compatible endpoint.
+
+Usage: free-bot [--background]
+
+  --background   Run bots, routines, webhooks and file watches without a window.
+                 Opening the app later takes over from the background copy.
+  --help         Show this help.
+  --version      Show the version.
+
+Set FREEBOT_DATA_DIR to use a different data folder.";
+
 fn main() -> eframe::Result {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match args.first().map(String::as_str) {
+        Some("--background" | "--headless") => std::process::exit(background::run()),
+        Some("--help" | "-h") => {
+            println!("{HELP}");
+            return Ok(());
+        }
+        Some("--version" | "-V") => {
+            println!("free-bot {}", env!("CARGO_PKG_VERSION"));
+            return Ok(());
+        }
+        Some(other) => {
+            eprintln!("Unknown option {other}.\n\n{HELP}");
+            std::process::exit(2);
+        }
+        None => {}
+    }
+    let Some(_guard) = background::InstanceGuard::acquire_for_window(store::Store::open_default().root()) else {
+        eprintln!("Free Bot is already open.");
+        std::process::exit(1);
+    };
     let screenshot = std::env::var_os("FREEBOT_SCREENSHOT").map(|p| ScreenshotPlan {
         path: p.into(),
         view: std::env::var("FREEBOT_SCREENSHOT_VIEW").unwrap_or_else(|_| "home".into()),

@@ -203,12 +203,11 @@ pub fn collect_text_files(dir: &Path, out: &mut Vec<std::path::PathBuf>, depth: 
         }
         if p.is_dir() {
             collect_text_files(&p, out, depth + 1);
-        } else if let Some(ext) = p.extension().and_then(|x| x.to_str()) {
-            if matches!(ext.to_lowercase().as_str(), "md" | "txt" | "markdown" | "org" | "csv" | "json" | "yaml" | "yml" | "html" | "rst")
-                && e.metadata().is_ok_and(|m| m.len() < 2_000_000)
-            {
-                out.push(p);
-            }
+        } else if let Some(ext) = p.extension().and_then(|x| x.to_str())
+            && matches!(ext.to_lowercase().as_str(), "md" | "txt" | "markdown" | "org" | "csv" | "json" | "yaml" | "yml" | "html" | "rst")
+            && e.metadata().is_ok_and(|m| m.len() < 2_000_000)
+        {
+            out.push(p);
         }
     }
 }

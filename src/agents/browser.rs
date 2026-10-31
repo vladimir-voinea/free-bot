@@ -116,10 +116,6 @@ impl BrowserManager {
         *self.path.lock().unwrap_or_else(|e| e.into_inner()) = p.to_string();
     }
 
-    pub fn is_running(&self) -> bool {
-        self.proc_.lock().unwrap_or_else(|e| e.into_inner()).is_some()
-    }
-
     pub fn has_tab(&self, agent: &str) -> bool {
         self.tabs.lock().unwrap_or_else(|e| e.into_inner()).contains_key(agent)
     }

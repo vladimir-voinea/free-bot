@@ -50,7 +50,6 @@ pub struct ToolCtx<'a> {
     pub thread: &'a str,
     pub wake: &'a Wake,
     pub cancel: &'a AtomicBool,
-    pub call_id: &'a str,
 }
 
 #[derive(Debug, Default)]

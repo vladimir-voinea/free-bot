@@ -362,7 +362,7 @@ impl FreeBotApp {
                     ui.label("At minute");
                     ui.add(egui::DragValue::new(&mut ed.minute).range(0..=59));
                 }
-                2 | 3 | 4 => {
+                2..=4 => {
                     if ed.kind == 3 {
                         egui::ComboBox::from_id_salt("routine-wd").selected_text(weekday_name(ed.weekday)).show_ui(ui, |ui| {
                             for d in 0..7 {

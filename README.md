@@ -1,6 +1,8 @@
 # Free Bot
 
-A fast, native AI chat app for the desktop, written in Rust. Bring your own provider and model: Free Bot talks to any OpenAI-compatible API (OpenAI, OpenRouter, Groq, Mistral, DeepSeek, Together, Ollama, LM Studio, vLLM and more), keeps your chats on your computer, and never phones home.
+A native desktop app for a team of AI bots, written in Rust. Bots are contacts you message. They talk to each other, hand off work, share a browser, files and a terminal, run routines on a schedule, and ask before doing anything risky. There is also a plain chat for quick questions.
+
+Bring your own provider and model: Free Bot talks to any OpenAI-compatible endpoint, hosted or on your own machine, with a different model per bot if you like. Everything stays on your computer and nothing phones home.
 
 ![Free Bot home screen](docs/screenshots/home.png)
 
@@ -10,7 +12,32 @@ A fast, native AI chat app for the desktop, written in Rust. Bring your own prov
 | **Search chats (Ctrl+K)** | **Light theme** |
 | ![Search](docs/screenshots/search.png) | ![Light theme](docs/screenshots/light.png) |
 
-## Features
+## Bots
+
+| A bot hands work to another | A channel with several bots |
+|---|---|
+| ![Delegation](docs/screenshots/bots-delegation.png) | ![Channel](docs/screenshots/bots-channel.png) |
+| **Approval before risky actions** | **Each bot's own browser, live** |
+| ![Approval](docs/screenshots/bots-approval.png) | ![Browser](docs/screenshots/bots-browser.png) |
+| **Activity: what needs you, what's running** | **Routines** |
+| ![Activity](docs/screenshots/bots-activity.png) | ![Routines](docs/screenshots/bots-routines.png) |
+
+- **Bots as contacts.** Create bots from templates (chief of staff, researcher, engineer, writer, inbox assistant) or from scratch: name, role, instructions, color and shape, model and temperature, tools, connectors, approval rules and a working folder.
+- **Direct messages and channels.** Message one bot, or put several in a channel. In a channel, @mention a bot to wake it; messages that mention nobody go to the channel lead.
+- **Bots work together.** A bot can hand a task to another and wait for the result (`delegate_task`), send a message without waiting (`send_message`), post to a channel, or create a new bot. Their conversations appear under **Between bots**, read-only, and every task shows on the Activity page. Hop and step limits stop endless loops.
+- **A computer per bot.** Each bot has a workspace folder (files), a terminal (`run_command`), web search and page fetching, and its own tab in a shared headless Chrome or Chromium, so logins are shared across the team. Watch the browser live in the bot's **Computer** panel, **Take over** to log in or fix something, then hand it back.
+- **Teach a task.** Record yourself doing something in the browser; the steps become a skill any bot can load and repeat.
+- **Approvals.** Per bot: ask before risky actions (terminal, unknown connector tools), ask before everything, or never ask. Approve, deny or "Always allow" right on the card in the chat, or from the Activity page. You get a desktop notification when a bot needs you.
+- **Memory and knowledge.** Bots remember facts (private or shared with the team), search them, and search a knowledge folder of your notes. Edit memory in the bot's panel or on the Knowledge page.
+- **Skills.** Reusable step-by-step procedures, saved by you, by a bot, or by teaching a task.
+- **Routines.** Recurring work on a schedule (every N minutes, hourly, daily, weekly, monthly), when a file in a folder changes, or when its webhook URL is called (`POST http://127.0.0.1:8765/hook/<token>`, shown in the routine editor; turn webhooks on in **Settings → Bots**). Bots can set up routines themselves when you ask. Stalled tasks get a nudge.
+- **Connectors (MCP).** Add any MCP server, local (stdio) or remote (Streamable HTTP), to give bots tools for GitHub, Slack, Notion, Google Drive, databases and more. Read-only tools run freely; others ask first unless you trust the connector.
+- **Works with models without tool calling.** Free Bot uses native function calling when the endpoint supports it and falls back to describing tools in the prompt when it does not.
+- **Background mode.** `free-bot --background` keeps bots, routines and webhooks running with no window. Opening the app takes over from it.
+
+![Connectors](docs/screenshots/connectors.png)
+
+## Chat features
 
 - **Any OpenAI-compatible provider.** Add as many providers as you like, each with a base URL, API key and model list. One click loads the model list from the provider (`GET /models`), and "Test connection" checks your key.
 - **Model picker in the prompt box**, grouped by provider, plus a default model in settings.
@@ -49,7 +76,17 @@ You need a recent stable Rust toolchain (1.95 or newer).
 cargo run --release
 ```
 
-On first launch, click **Add provider** and pick a preset (or **Custom**), paste your API key, then click **Fetch models** or type a model id. For a local model, install [Ollama](https://ollama.com), run `ollama pull llama3.2`, and add the "Ollama (local)" preset with no key.
+On first launch, click **Add provider** and pick a preset (or **Custom**), paste your API key, then click **Fetch models** or type a model id. For a model on your own machine, start any server that exposes an OpenAI-compatible `/v1` endpoint and use the "Local server" preset with its URL.
+
+Bots work best with models that support tool calling. The browser tools need Chrome, Chromium or Edge installed (or a path in **Settings → Bots**).
+
+### Background mode
+
+```sh
+free-bot --background
+```
+
+Runs bots, routines, webhooks and file watches without a window, for example from a login item or a systemd user service. Only one copy works on a data folder at a time; opening the app asks the background copy to save and hand over. Approvals still need the app, so bots that are waiting for you show up there when you open it.
 
 ### Linux
 
@@ -57,13 +94,19 @@ Free Bot uses `winit` and `wgpu`, which load the system libraries at runtime. Mo
 
 ## Where data lives
 
-Settings and chats are stored as JSON in the platform data folder (shown in **Settings → Data controls**):
+Settings, chats and bots are stored as JSON in the platform data folder (shown in **Settings → Data controls**):
 
 - Linux: `~/.local/share/freebot/`
 - macOS: `~/Library/Application Support/dev.FreeBot.Free-Bot/`
 - Windows: `%APPDATA%\FreeBot\Free Bot\data\`
 
 `settings.json` holds your API keys, so it is created readable only by you (mode 600 on Unix). Set `FREEBOT_DATA_DIR` to use another folder.
+
+The agent layer lives in `fleet/`: `agents.json`, `threads/<id>.json`, `memory.json`, `skills.json`, `tasks.json`, `routines.json`, `config.json` (connectors, may hold tokens, mode 600), `browser-profile/` (the shared browser's logins) and `agents/<id>/workspace/` (each bot's default working folder).
+
+### A word on safety
+
+Bot tools run with your user account. File tools are confined to the bot's workspace, but `run_command` is a real shell in that folder and is **not sandboxed**, which is why it asks for approval by default. Keep approvals on for bots that can run commands, and only add connectors you trust.
 
 ## Why egui
 
@@ -80,7 +123,18 @@ Tauri would have meant writing the UI in HTML/JS, and iced or Slint would have g
 
 ```
 src/
-  main.rs        window setup
+  main.rs        window setup, command-line options
+  background.rs  background mode and the one-copy-per-data-folder guard
+  agents/
+    model.rs     bots, threads, tasks, routines, connectors
+    engine.rs    the fleet: state, waking bots, approvals, routines, webhooks
+    runtime.rs   one bot turn: model call, tool calls, approvals
+    llm.rs       streaming tool calling, with a prompt-based fallback
+    prompt.rs    system prompts and thread history per bot
+    tools/       team, memory and skills, files and terminal, web, browser
+    browser.rs   shared headless browser over the DevTools protocol
+    mcp.rs       MCP client (stdio and Streamable HTTP)
+    persist.rs   storage under fleet/
   app.rs         app state and logic: sending, streaming, titles, attachments
   api.rs         OpenAI-compatible client (SSE streaming, /models, titles)
   store.rs       data model and JSON persistence
@@ -94,20 +148,18 @@ src/
     icons.rs     Free Bot's vector icon set
     theme.rs     colors, fonts, widget style
     widgets.rs   shared widgets
+    agents/      bot sidebar, threads, bot panel, editors, Activity/Routines/Knowledge
 assets/          logo, app icon and bundled fonts
 ```
 
 Run the tests with `cargo test`.
 
-## Not in this first version
+## Not yet
 
-Free Bot covers the core chat experience. These are planned for later:
-
-- Voice mode and read-aloud
+- Voice and read-aloud
 - Image generation
-- Web search / deep research (needs a search provider)
-- Projects (grouped chats with shared files and instructions)
 - PDF and Office document attachments
+- A sandbox for the terminal tool
 - Mobile and web builds
 
 ## Credits

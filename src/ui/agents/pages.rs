@@ -551,6 +551,18 @@ impl FreeBotApp {
         );
         widgets::text_field(ui, &mut cfg.browser_path, "Auto-detect (or a path to the browser)", false);
         ui.add_space(10.0);
+        ui.label(egui::RichText::new("Background").font(theme::font_bold(14.0)).color(p.text));
+        ui.add(
+            egui::Label::new(
+                egui::RichText::new(
+                    "Bots, routines and webhooks run while this window is open. To keep them working with the window closed, run \"free-bot --background\" (for example at login). Opening the app takes over from it.",
+                )
+                .font(theme::font(12.5))
+                .color(p.muted),
+            )
+            .wrap(),
+        );
+        ui.add_space(10.0);
         ui.label(egui::RichText::new("Data").font(theme::font_bold(14.0)).color(p.text));
         let root = self.fleet.store().root().display().to_string();
         ui.label(

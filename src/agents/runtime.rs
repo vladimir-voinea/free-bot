@@ -17,6 +17,7 @@ const MAX_CALLS_PER_STEP: usize = 8;
 
 pub fn run_turn(fleet: &Fleet, w: &Wake, cancel: &AtomicBool) {
     let max_steps = fleet.lock().config.max_steps.max(1);
+    fleet.mcp().wait_ready(Duration::from_secs(15));
     let mut native = None;
     for _step in 0..max_steps {
         if cancel.load(Ordering::Relaxed) {
@@ -228,7 +229,7 @@ fn one_step(fleet: &Fleet, w: &Wake, cancel: &AtomicBool, native: &mut Option<bo
         }
 
         fleet.set_status(&w.agent, &w.thread, def.status.clone());
-        let ctx = ToolCtx { fleet, agent: &agent, thread: &w.thread, wake: w, cancel, call_id: &c.id };
+        let ctx = ToolCtx { fleet, agent: &agent, thread: &w.thread, wake: w, cancel };
         let out = tools::execute(&ctx, &def.name, &args);
         let status = if out.error { ToolStatus::Error } else { ToolStatus::Done };
         set_call(fleet, w, &msg_id, &c.id, status, Some(prompt::truncate(&out.text, 20_000)), out.link);

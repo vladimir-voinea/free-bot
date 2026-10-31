@@ -129,10 +129,6 @@ impl FleetState {
         self.threads.iter().find(|t| t.channel_name().is_some_and(|n| n.to_lowercase() == q))
     }
 
-    pub fn is_running(&self, agent: &str, thread: &str) -> bool {
-        self.runs.contains_key(&(agent.to_string(), thread.to_string()))
-    }
-
     pub fn agent_busy(&self, agent: &str) -> bool {
         self.runs.keys().any(|(a, _)| a == agent)
     }

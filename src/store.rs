@@ -50,8 +50,7 @@ pub const PROVIDER_PRESETS: &[(&str, &str, &[&str])] = &[
     ("Mistral", "https://api.mistral.ai/v1", &["mistral-small-latest"]),
     ("DeepSeek", "https://api.deepseek.com/v1", &["deepseek-chat", "deepseek-reasoner"]),
     ("Together", "https://api.together.xyz/v1", &[]),
-    ("Ollama (local)", "http://localhost:11434/v1", &["llama3.2"]),
-    ("LM Studio (local)", "http://localhost:1234/v1", &[]),
+    ("Local server", "http://localhost:8080/v1", &[]),
     ("Custom", "", &[]),
 ];
 

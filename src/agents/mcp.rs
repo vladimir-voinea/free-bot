@@ -72,6 +72,19 @@ impl McpManager {
         }
     }
 
+    /// Wait (up to `timeout`) for connectors that are still starting, so an
+    /// agent turn right after launch sees their tools.
+    pub fn wait_ready(&self, timeout: std::time::Duration) {
+        let end = std::time::Instant::now() + timeout;
+        while std::time::Instant::now() < end {
+            let starting = self.servers.lock().unwrap_or_else(|e| e.into_inner()).values().any(|s| matches!(s.status, McpStatus::Starting));
+            if !starting {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+    }
+
     pub fn restart(&self, c: &Connector) {
         self.servers.lock().unwrap_or_else(|e| e.into_inner()).remove(&c.id);
         self.sync(std::slice::from_ref(c));

@@ -277,10 +277,8 @@ impl FreeBotApp {
             Some(f) => (f.url.clone(), f.title.clone(), f.seq, Some(f.jpeg.clone())),
             None => (String::new(), String::new(), 0, None),
         });
-        if self.agent_ui.url_input.is_empty() || !ui.memory(|m| m.has_focus(egui::Id::unique("browser-url"))) {
-            if !url.is_empty() {
-                self.agent_ui.url_input = url.clone();
-            }
+        if (self.agent_ui.url_input.is_empty() || !ui.memory(|m| m.has_focus(egui::Id::unique("browser-url")))) && !url.is_empty() {
+            self.agent_ui.url_input = url.clone();
         }
         ui.horizontal(|ui| {
             let mut u = std::mem::take(&mut self.agent_ui.url_input);

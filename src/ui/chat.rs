@@ -556,7 +556,7 @@ fn setup_card(ui: &mut egui::Ui) -> bool {
                     ui.add(
                         egui::Label::new(
                             egui::RichText::new(
-                                "Free Bot works with any OpenAI-compatible API: OpenAI, OpenRouter, Groq, Ollama, LM Studio and more.",
+                                "Free Bot works with any OpenAI-compatible API: hosted services or a model server on your own machine.",
                             )
                             .font(theme::font(13.0))
                             .color(p.muted),

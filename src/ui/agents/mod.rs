@@ -93,7 +93,6 @@ pub struct AgentUi {
     pub between_open: bool,
     pub scroll_bottom: bool,
     pub focus_composer: bool,
-    pub mention_sel: usize,
     pub memory_input: String,
     pub memory_shared: bool,
     pub confirm_delete_agent: Option<String>,
